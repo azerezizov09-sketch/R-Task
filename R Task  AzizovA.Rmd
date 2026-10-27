@@ -1,0 +1,571 @@
+---
+title: "Data Loading, Cleaning and First Exploration"
+author: "Azizov Azer"
+date: "`r format(Sys.Date(), '%d %b %Y')`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    
+---
+
+
+## Setup 
+
+```{r setup, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(scales) 
+library(knitr)
+df = read.csv("C:/Users/Azer/OneDrive/Desktop/R Devlab/archive/sales_data_sample.csv", fileEncoding = "latin1")
+```
+
+## Task 1
+
+
+```{r task1, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+df_clean = df
+```
+## Task 2
+
+
+```{r task2, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+df_clean$ORDERDATE = as.Date(df_clean$ORDERDATE, format = "%m/%d/%Y %H:%M")
+```
+
+## Task 3
+
+
+```{r task3, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+colSums(df_clean == "", na.rm = TRUE)
+```
+
+## Task 4
+
+
+```{r task4, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+df_clean$TERRITORY[is.na(df_clean$TERRITORY)] = "Unknown"
+```
+
+
+## Task 5
+
+
+```{r task5, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+summary(df_clean[, c("QUANTITYORDERED", "PRICEEACH", "SALES", "MSRP")])
+table(df_clean$STATUS)
+table(df_clean$YEAR_ID)
+sort(table(df_clean$PRODUCTLINE), decreasing = TRUE)
+```
+
+
+## Task 6
+
+
+```{r task6, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+ggplot(df_clean, aes(x = SALES)) +
+  geom_histogram(bins = 30, fill = "steelblue", color = "white") +
+  scale_x_continuous(labels = scales::label_comma()) +
+  labs(
+    title = "Satış məbləğlərinin paylanması",
+    x = "Satış məbləği",
+    y = "Satış sətirlərinin sayı"
+  ) +
+  theme_minimal()
+```
+
+
+## Task 7
+
+
+```{r task7, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+il_tehlili = df_clean %>%
+  group_by(YEAR_ID) %>%
+  summarise(
+    Satis_setirlerinin_sayi = n(),
+    Umumi_satis = sum(SALES, na.rm = TRUE),
+    Orta_satis = mean(SALES, na.rm = TRUE)
+  )
+
+il_tehlili
+```
+
+
+## Task 8
+
+
+```{r task8, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+ggplot(il_tehlili, aes(x = factor(YEAR_ID), y = Satis_setirlerinin_sayi)) +
+  geom_col(fill = "steelblue", width = 0.7) +
+  geom_text(
+    aes(label = Satis_setirlerinin_sayi),
+    vjust = -0.5,
+    size = 4
+  ) +
+  labs(
+    title = "İllər üzrə satış sətirlərinin sayı",
+    x = "İl",
+    y = "Satış sətirlərinin sayı"
+  ) +
+  theme_minimal(base_size = 13)
+```
+
+
+## Task 9
+
+
+```{r task9, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+ggplot(il_tehlili, aes(x = factor(YEAR_ID), y = Umumi_satis)) +
+  geom_col(fill = "darkseagreen4", width = 0.7) +
+  geom_text(
+    aes(label = scales::comma(round(Umumi_satis, 0))),
+    vjust = -0.5,
+    size = 4
+  ) +
+  scale_y_continuous(labels = scales::comma) +
+  labs(
+    title = "İllər üzrə ümumi satış məbləği",
+    x = "İl",
+    y = "Ümumi satış məbləği"
+  ) +
+  theme_minimal(base_size = 13)
+```
+
+
+## Task 10
+
+
+```{r task10, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+mehsul_tehlili = df_clean %>%
+  group_by(PRODUCTLINE) %>%
+  summarise(
+    Satis_setirlerinin_sayi = n(),
+    Umumi_satis = sum(SALES, na.rm = TRUE)
+  ) %>%
+  arrange(desc(Satis_setirlerinin_sayi))
+
+mehsul_tehlili
+```
+
+
+## Task 11
+
+
+```{r task11, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+ggplot(mehsul_tehlili,
+       aes(x = reorder(PRODUCTLINE, Satis_setirlerinin_sayi),
+           y = Satis_setirlerinin_sayi)) +
+  geom_col(fill = "steelblue", width = 0.7) +
+  geom_text(
+    aes(label = Satis_setirlerinin_sayi),
+    hjust = -0.2,
+    size = 4
+  ) +
+  coord_flip(clip = "off") +
+  scale_y_continuous(
+    limits = c(0, 1100),
+    breaks = seq(0, 1000, 250),
+    expand = expansion(mult = c(0, 0.02))
+  ) +
+  labs(
+    title = "Məhsul xətləri üzrə satış sətirlərinin sayı",
+    x = "Məhsul xətti",
+    y = "Satış sətirlərinin sayı"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.margin = margin(10, 35, 10, 10)
+  )
+```
+
+
+
+## Task 12
+
+
+```{r task12, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+status_tehlili = df_clean %>%
+  group_by(STATUS) %>%
+  summarise(
+    Satis_setirlerinin_sayi = n()
+  ) %>%
+  arrange(desc(Satis_setirlerinin_sayi))
+
+status_tehlili
+```
+
+
+## Task 13
+
+
+```{r task13, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+ggplot(status_tehlili,
+       aes(x = reorder(STATUS, Satis_setirlerinin_sayi),
+           y = Satis_setirlerinin_sayi)) +
+  geom_col(fill = "steelblue", width = 0.7) +
+  geom_text(
+    aes(label = Satis_setirlerinin_sayi),
+    hjust = -0.2,
+    size = 4
+  ) +
+  coord_flip(clip = "off") +
+  scale_y_continuous(
+    limits = c(0, max(status_tehlili$Satis_setirlerinin_sayi) * 1.15),
+    expand = expansion(mult = c(0, 0.02))
+  ) +
+  labs(
+    title = "Sifariş statusları üzrə satış sətirlərinin sayı",
+    x = "Sifariş statusu",
+    y = "Satış sətirlərinin sayı"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.margin = margin(10, 25, 10, 10)
+  )
+```
+
+
+## Task 14
+
+
+```{r task14, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+olke_tehlili = df_clean %>%
+  group_by(COUNTRY) %>%
+  summarise(
+    Satis_setirlerinin_sayi = n(),
+    Umumi_satis = sum(SALES, na.rm = TRUE)
+  ) %>%
+  arrange(desc(Satis_setirlerinin_sayi))
+
+olke_tehlili
+```
+
+
+## Task 15
+
+
+```{r task15, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+top_10_olke = olke_tehlili %>%
+  slice_max(order_by = Satis_setirlerinin_sayi, n = 10)
+
+ggplot(top_10_olke,
+       aes(x = reorder(COUNTRY, Satis_setirlerinin_sayi),
+           y = Satis_setirlerinin_sayi)) +
+  geom_col(fill = "steelblue", width = 0.7) +
+  geom_text(
+    aes(label = Satis_setirlerinin_sayi),
+    hjust = -0.2,
+    size = 3.5
+  ) +
+  coord_flip(clip = "off") +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, 0.15))
+  ) +
+  labs(
+    title = "Satış sətirlərinin sayına görə ilk 10 ölkə",
+    x = "Ölkə",
+    y = "Satış sətirlərinin sayı"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.margin = margin(10, 30, 10, 10)
+  )
+```
+
+
+## Task 16
+
+```{r task16, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+Q1 = quantile(df_clean$SALES, 0.25, na.rm = TRUE)
+Q3 = quantile(df_clean$SALES, 0.75, na.rm = TRUE)
+
+IQR_deyeri = IQR(df_clean$SALES, na.rm = TRUE)
+
+alt_serhed = Q1 - 1.5 * IQR_deyeri
+ust_serhed = Q3 + 1.5 * IQR_deyeri
+
+c(
+  Q1 = Q1,
+  Q3 = Q3,
+  IQR = IQR_deyeri,
+  Alt_serhed = alt_serhed,
+  Ust_serhed = ust_serhed
+)
+```
+
+
+## Task 17
+```{r task17, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+kənar_satışlar = df_clean %>%
+  filter(SALES < alt_serhed | SALES > ust_serhed)
+
+nrow(kənar_satışlar)
+```
+
+
+## Task 18
+```{r task18, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+ggplot(df_clean, aes(y = SALES)) +
+  geom_boxplot(fill = "steelblue", alpha = 0.7) +
+  scale_y_continuous(labels = scales::label_comma()) +
+  labs(
+    title = "Satış məbləğlərinin Boxplot təhlili",
+    x = "",
+    y = "Satış məbləği"
+  ) +
+  theme_minimal(base_size = 13)
+```
+
+
+## Task 19
+```{r task19, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+olke_satis_tehlili = df_clean %>%
+  group_by(COUNTRY) %>%
+  summarise(
+    Umumi_satis = sum(SALES, na.rm = TRUE)
+  ) %>%
+  arrange(desc(Umumi_satis))
+
+top_10_olke_satis = olke_satis_tehlili %>%
+  slice_max(order_by = Umumi_satis, n = 10)
+
+top_10_olke_satis
+```
+
+
+## Task 20
+```{r task20, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+ggplot(top_10_olke_satis,
+       aes(x = reorder(COUNTRY, Umumi_satis),
+           y = Umumi_satis)) +
+  geom_col(fill = "darkseagreen4", width = 0.7) +
+  geom_text(
+    aes(label = scales::comma(round(Umumi_satis, 0))),
+    hjust = -0.15,
+    size = 3.5
+  ) +
+  coord_flip(clip = "off") +
+  scale_y_continuous(
+    labels = scales::label_comma(),
+    expand = expansion(mult = c(0, 0.18))
+  ) +
+  labs(
+    title = "Ümumi satış məbləğinə görə ilk 10 ölkə",
+    x = "Ölkə",
+    y = "Ümumi satış məbləği"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(plot.margin = margin(10, 35, 10, 10))
+```
+
+
+## Task 21
+```{r task21, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+mehsul_satis_tehlili = df_clean %>%
+  group_by(PRODUCTLINE) %>%
+  summarise(
+    Umumi_satis = sum(SALES, na.rm = TRUE),
+    Orta_satis = mean(SALES, na.rm = TRUE),
+    Satis_setirlerinin_sayi = n()
+  ) %>%
+  arrange(desc(Umumi_satis))
+
+mehsul_satis_tehlili
+```
+
+
+## Task 22
+```{r task22, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+ggplot(mehsul_satis_tehlili,
+       aes(x = reorder(PRODUCTLINE, Umumi_satis),
+           y = Umumi_satis)) +
+  geom_col(fill = "darkseagreen4", width = 0.7) +
+  geom_text(
+    aes(label = scales::comma(round(Umumi_satis, 0))),
+    hjust = -0.15,
+    size = 3.5
+  ) +
+  coord_flip(clip = "off") +
+  scale_y_continuous(
+    labels = scales::label_comma(),
+    expand = expansion(mult = c(0, 0.18))
+  ) +
+  labs(
+    title = "Məhsul xətləri üzrə ümumi satış məbləği",
+    x = "Məhsul xətti",
+    y = "Ümumi satış məbləği"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(plot.margin = margin(10, 35, 10, 10))
+```
+
+
+## Task 23
+```{r task23, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+na_tehlili = data.frame(
+  Sutun = names(df_clean),
+  NA_sayi = colSums(is.na(df_clean)),
+  NA_faizi = round(colMeans(is.na(df_clean)) * 100, 2)
+)
+
+na_tehlili
+```
+## Task 24
+```{r task24, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+bos_metn_tehlili = data.frame(
+  Sutun = names(df_clean),
+  Bos_metn_sayi = sapply(df_clean, function(x) {
+    if (is.character(x)) {
+      sum(trimws(x) == "", na.rm = TRUE)
+    } else {
+      0
+    }
+  })
+)
+
+bos_metn_tehlili
+```
+## Task 25
+```{r task25, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+df_clean$ADDRESSLINE2[
+  is.na(df_clean$ADDRESSLINE2) |
+  trimws(df_clean$ADDRESSLINE2) == ""
+] = "Unknown"
+
+df_clean$STATE[
+  is.na(df_clean$STATE) |
+  trimws(df_clean$STATE) == ""
+] = "Unknown"
+
+df_clean$POSTALCODE[
+  is.na(df_clean$POSTALCODE) |
+  trimws(df_clean$POSTALCODE) == ""
+] = "Unknown"
+
+df_clean$TERRITORY[
+  is.na(df_clean$TERRITORY) |
+  trimws(df_clean$TERRITORY) == ""
+] = "Unknown"
+```
+
+
+
+## Task 26
+```{r task26, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+colSums(is.na(df_clean))
+
+sapply(df_clean, function(x) {
+  if (is.character(x)) {
+    sum(trimws(x) == "", na.rm = TRUE)
+  } else {
+    0
+  }
+})
+```
+## Task 27
+```{r task27, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+dublikat_sayi = sum(duplicated(df_clean))
+
+cat("Dublikat sətirlərin sayı:", dublikat_sayi)
+```
+
+## Task 28
+```{r task28, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+il_sifaris_sayi = df_clean %>%
+  group_by(YEAR_ID) %>%
+  summarise(
+    Sifaris_sayi = n_distinct(ORDERNUMBER)
+  )
+
+il_sifaris_sayi
+```
+
+## Task 29
+```{r task29, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+ggplot(il_sifaris_sayi,
+       aes(x = factor(YEAR_ID), y = Sifaris_sayi)) +
+  geom_col(fill = "steelblue", width = 0.7) +
+  geom_text(
+    aes(label = scales::comma(Sifaris_sayi)),
+    vjust = -0.5,
+    size = 4
+  ) +
+  scale_y_continuous(
+    labels = scales::label_comma(),
+    expand = expansion(mult = c(0, 0.12))
+  ) +
+  labs(
+    title = "İllər üzrə unikal sifarişlərin sayı",
+    x = "İl",
+    y = "Sifarişlərin sayı"
+  ) +
+  theme_minimal(base_size = 13)
+```
+## Task 30
+```{r task30, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+write.csv(
+  df_clean,
+  "sales_data_cleaned.csv",
+  row.names = FALSE,
+  na = "",
+  fileEncoding = "UTF-8"
+)
+
+cat("Təmizlənmiş CSV faylı yaradıldı.")
+```
+## Task 31
+```{r task31, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+umumi_satis = sum(df_clean$SALES, na.rm = TRUE)
+
+orta_satis = mean(df_clean$SALES, na.rm = TRUE)
+
+median_satis = median(df_clean$SALES, na.rm = TRUE)
+
+shipped_faizi = mean(df_clean$STATUS == "Shipped", na.rm = TRUE) * 100
+
+cat("Ümumi satış məbləği:", round(umumi_satis, 2), "\n")
+cat("Orta satış məbləği:", round(orta_satis, 2), "\n")
+cat("Median satış məbləği:", round(median_satis, 2), "\n")
+cat("Shipped statusunun satış sətirlərində payı:", round(shipped_faizi, 2), "%\n")
+```
+## Task 32
+```{r task32, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+en_cox_sifaris = il_sifaris_sayi %>%
+  arrange(desc(Sifaris_sayi)) %>%
+  slice(1)
+
+en_cox_sifaris
+```
+## Task 33
+```{r task33, error=FALSE, message=FALSE, warning=FALSE, echo=TRUE, include=TRUE}
+
+
+note_metni = c(
+  "# Data Loading, Cleaning and First Exploration",
+  "",
+  "## Dataset haqqinda",
+  "",
+  "Dataset 2823 setir ve 25 sutundan ibaretdir.",
+  "",
+  "## Melumatlarin temizlenmesi",
+  "",
+  "- ORDERDATE sutunu tarix formatina cevrildi.",
+  "- NA ve bos metnler yoxlanildi.",
+  "- Mu uygun metn sutunlarinda bos deyerler Unknown ile evez edildi.",
+  "- Dublikat setirler yoxlanildi.",
+  "",
+  "## Ilkin tehlil",
+  "",
+  "- SALES sutunu uzre statistik gostericiler hesablandi.",
+  "- STATUS, YEAR_ID ve PRODUCTLINE sutunlari tehlil edildi.",
+  "- SALES histogrami yaradildi.",
+  "- Iller uzre unikal sifarislerin sayi hesablandi.",
+  ""
+)
+
+writeLines(note_metni, "note.md", useBytes = TRUE)
+
+cat("note.md fayli ugurla yaradildi.")
+
+```
